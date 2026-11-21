@@ -40,7 +40,7 @@ python -m pytest -q
 
 Edge recall by how the connection is drawn: wire 0.89 · net label 0.91 · power symbol 0.95;
 by endpoint: 2–3-pin parts 0.91 · multi-pin parts (≥4 pins) 0.96. Per-project table: [results.md](results.md).
-Zero hallucinated components; 12 of 25 schematics come out with perfect edge F1.
+Zero hallucinated components; 13 of 25 schematics come out with perfect edge F1.
 
 ### Error analysis
 
