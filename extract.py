@@ -58,7 +58,7 @@ def call_gemini(pdf, model, key, retries=5):
         data=json.dumps(body).encode(), headers={"Content-Type": "application/json", "x-goog-api-key": key})
     for attempt in range(retries):
         try:
-            with urllib.request.urlopen(req, timeout=300) as resp:
+            with urllib.request.urlopen(req, timeout=600) as resp:
                 out = json.load(resp)
             break
         except urllib.error.HTTPError as e:

@@ -29,31 +29,36 @@ python s2g.py eval data                          # -> results.md, results.json
 python -m pytest -q
 ```
 
-## Results (v1, `gemini-3.8-flash`, 10 of 25 projects, 136 components, 385 GT edges)
+## Results (v1, `gemini-3.8-flash`, 25 projects, 362 components, 1358 GT edges)
 
 | metric | value |
 |---|---|
-| component recall / precision | 1.00 / 1.00 |
-| value accuracy (matched comps) | 0.95 |
-| edge precision / recall / **F1** | 0.96 / 0.91 / **0.94** |
-| edge F1 without power nets | 0.92 |
+| component recall / precision | 0.97 / 1.00 |
+| value accuracy (matched comps) | 0.93 |
+| edge precision / recall / **F1** | 0.95 / 0.93 / **0.94** |
+| edge F1 without power nets | 0.93 |
 
-Edge recall by how the connection is drawn: wire 0.92 · net label 0.95 · power symbol 0.90;
-by endpoint: 2–3-pin parts 0.91 · multi-pin parts (≥4 pins) 0.92. Per-project table: [results.md](results.md).
+Edge recall by how the connection is drawn: wire 0.89 · net label 0.91 · power symbol 0.95;
+by endpoint: 2–3-pin parts 0.91 · multi-pin parts (≥4 pins) 0.96. Per-project table: [results.md](results.md).
+Zero hallucinated components; 12 of 25 schematics come out with perfect edge F1.
 
 ### Error analysis
 
-Finding components is solved here; the errors are **in pin-to-net attribution**:
+Finding components is almost solved. The errors are in **small parts** and in **pin-to-net attribution**:
 
-- **One wrong pin, many wrong edges.** In `lm386_amp` the model put C1 on GND instead of C2: one pin error
-  gives 7 missed + 7 fake edges, because GND is a clique. Edge F1 penalises big nets quadratically, so the next
-  metric to add is net-level or pin-level scoring.
-- **Look-alike parts get swapped.** `TP4056` has five identical 1-pin connectors (`Conn_01x01`). The model mixed up
-  J4/J5 and J2/J5, so every edge landed on the wrong connector. It also returned the label text next to each pad
-  (`GND`, `OUT+`) as the value: that explains 5 of the 7 value "errors".
-- **Labels that look like power.** In `sega-gun` a lowercase local label `gnd` (not a power symbol) loses J2: 8 edges.
-- **Dense drawn wiring** (transistor bias network in `BoBoBaSs84`, unnamed nets): it misses junctions, recall 0.83.
-- Surprisingly, net labels (0.95) are **not** harder than drawn wires (0.92), and ICs/connectors are not worse than
-  2-pin parts. The weak spot is ambiguity (identical parts, crowded nodes), not the number of pins.
+- **1-pin connectors/pads are the weak spot.** In `miniRGBii` the model skips all 9 output pads
+  (`Conn_01x01`): it sees them as wire ends, not components (component recall 0.68, all misses). In `TP4056` five
+  identical pads get swapped (J4↔J5, J2↔J5), and it returns the text next to each pad (`GND`, `OUT+`) as the value.
+- **One wrong pin, many wrong edges.** In `lm386_amp` it puts C1 on GND instead of C2: one pin error gives
+  7 missed + 7 fake edges (GND is a clique). Edge F1 penalises big nets quadratically: pin-level scoring is the next metric.
+- **It "cleans up" the circuit.** In `ESP8266-IMU-Node` it connects U1↔U2 directly on SDA/SCL and skips the series
+  resistors R8/R9: it reads the label name, not the topology.
+- **Dense drawn wiring / unnamed nets** (`BoBoBaSs84` transistor bias, `tiny_sensor`): missed junctions, recall ~0.8.
+- Drawn wires (0.89) and net labels (0.91) are the hardest. Power symbols are the easiest (0.95), and ICs are **easier**
+  than 2-pin parts (0.96 vs 0.91), because pins are named and drawn far apart.
 
-Limits: 10 projects (≈2 min per schematic on the free tier), one run at temperature 0, small flat schematics only.
+**Metric pitfall I found on the way.** Detecting power nets by name breaks when the two sides disagree. In
+`tiny_sensor` the 3V3 rail is `Net-(D1-A)` in the netlist but `3V3` for the model, so the "no power" F1 dropped to 0.26
+for a rail the model actually got right. Fix: drop a power edge from both sides if either side calls it power.
+
+Limits: one run at temperature 0, small flat schematics only, ~2 min per schematic on the free tier.

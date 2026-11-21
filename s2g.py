@@ -78,7 +78,9 @@ def evaluate(gt_comps, gt_nets, gt_pins, pr_comps, pr_nets):
     """Raw counts (so projects can be micro-averaged)."""
     gt_g, pr_g = graph(gt_comps, gt_nets), graph(pr_comps, pr_nets)
     gt_e, pr_e = edges(gt_g), edges(pr_g)
-    gt_np, pr_np = edges(graph(gt_comps, gt_nets, True)), edges(graph(pr_comps, pr_nets, True))
+    # power-only edges, dropped from both sides if either side calls the net power (names can disagree: "3V3" vs "Net-(D1-A)")
+    pw = (gt_e - edges(graph(gt_comps, gt_nets, True))) | (pr_e - edges(graph(pr_comps, pr_nets, True)))
+    gt_np, pr_np = gt_e - pw, pr_e - pw
     matched = gt_comps.keys() & pr_comps.keys()
     r = {
         "comp": [len(matched), len(gt_comps), len(pr_comps)],
