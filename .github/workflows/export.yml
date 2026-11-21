@@ -1,0 +1,27 @@
+# Clone each project in projects.txt at its pinned commit, export schematic PDF + netlist with kicad-cli.
+name: export
+on:
+  workflow_dispatch:
+  push:
+    paths: [projects.txt, .github/workflows/export.yml]
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull -q kicad/kicad:10.0
+      - name: kicad-cli export
+        run: |
+          k() { docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/w" -w /w kicad/kicad:10.0 kicad-cli "$@" </dev/null; }
+          while read -r repo sha sch; do
+            [ -z "$repo" ] && continue
+            slug=${repo//\//__}; src=src/$slug; out=data/$slug
+            mkdir -p "$out"
+            git init -q "$src" && git -C "$src" fetch -q --depth 1 "https://github.com/$repo" "$sha" && git -C "$src" checkout -q FETCH_HEAD \
+              && k sch export pdf -o "$out/schematic.pdf" "$src/$sch" \
+              && k sch export netlist --format kicadxml -o "$out/netlist.xml" "$src/$sch" \
+              || { echo "::warning::failed $repo"; rm -rf "$out"; }
+          done < projects.txt
+          ls data | wc -l
+      - uses: actions/upload-artifact@v4
+        with: {name: data, path: data}
