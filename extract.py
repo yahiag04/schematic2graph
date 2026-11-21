@@ -1,6 +1,6 @@
 """Schematic PDF -> structured JSON (components + nets) with Gemini, validated against SCHEMA.
 
-Usage: GEMINI_API_KEY=... python extract.py data/ [--model gemini-2.5-flash] [--force]
+Usage: GEMINI_API_KEY=... python extract.py data/ [--model gemini-3.8-flash] [--force]
 Writes data/<project>/pred.json (or pred.error.txt on failure).
 """
 import argparse
@@ -72,7 +72,7 @@ def call_gemini(pdf, model, key, retries=5):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("data", nargs="?", default="data")
-    ap.add_argument("--model", default="gemini-2.5-flash")
+    ap.add_argument("--model", default="gemini-3.8-flash")
     ap.add_argument("--force", action="store_true")
     a = ap.parse_args()
     key = os.environ["GEMINI_API_KEY"]

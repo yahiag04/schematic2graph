@@ -118,6 +118,8 @@ def main(data_dir):
             if not k.endswith("_comps"):
                 total[k] = [a + b for a, b in zip(total.get(k, [0] * len(v)), v)]
 
+    if not rows:
+        sys.exit(f"no project in {data_dir} has both netlist.xml and pred.json")
     out = ["| project | comps | comp R | edge P | edge R | edge F1 | F1 no-power |", "|---|---|---|---|---|---|---|"]
     for name, r in rows + [("**MICRO TOTAL**", total)]:
         _, cr, _ = prf(*r["comp"])
